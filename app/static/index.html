@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BK21 · Dashboard Finansial &amp; Operasional</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="pole" aria-hidden="true"></div>
+    <div>
+      <h1>BK21</h1>
+      <p class="brand-sub">Monitoring Finansial &amp; Operasional Outlet</p>
+    </div>
+  </div>
+  <div class="header-kpis" id="header-kpis">
+    <div class="hkpi">
+      <span class="hkpi-label">Modal Awal</span>
+      <span class="hkpi-value" id="hkpi-modal">–</span>
+    </div>
+    <div class="hkpi">
+      <span class="hkpi-label">Modal Terkembalikan</span>
+      <span class="hkpi-value" id="hkpi-payback">–</span>
+    </div>
+  </div>
+  <nav class="tabs" aria-label="Halaman">
+    <button class="tab active" data-page="kpi">KPI</button>
+    <button class="tab" data-page="detail">Detail</button>
+    <button class="theme-toggle" id="theme-toggle" title="Ganti tema" aria-label="Ganti tema"></button>
+  </nav>
+</header>
+
+<main>
+  <!-- ============ HALAMAN KPI ============ -->
+  <section class="page active" id="page-kpi">
+    <nav class="filters" aria-label="Filter KPI">
+      <label class="field-label" for="kpi-year">Tahun</label>
+      <select id="kpi-year" aria-label="Tahun">
+        <option value="all">Semua Tahun</option>
+      </select>
+      <select id="kpi-outlet" aria-label="Outlet"></select>
+      <button id="btn-sync" class="ghost" title="Ambil ulang data dari laporan Excel">Sync Excel</button>
+    </nav>
+    <section class="kpi-row" id="kpis"></section>
+    <article class="panel">
+      <h2><span class="chip" aria-hidden="true"></span>Laba Bersih per Bulan</h2>
+      <p class="panel-sub">Satu garis per tahun</p>
+      <div class="chart tall" id="chart-profit-year"></div>
+    </article>
+    <article class="panel" style="margin-top:14px">
+      <h2><span class="chip" aria-hidden="true"></span>Omzet &amp; Laba Bersih</h2>
+      <p class="panel-sub">Mengikuti filter tahun yang dipilih</p>
+      <div class="chart tall" id="chart-omzet-profit"></div>
+    </article>
+  </section>
+
+  <!-- ============ HALAMAN DETAIL ============ -->
+  <section class="page" id="page-detail">
+    <nav class="filters" aria-label="Filter Detail">
+      <div class="presets" role="group">
+        <button class="preset" data-preset="week">Minggu</button>
+        <button class="preset active" data-preset="month">Bulan</button>
+        <button class="preset" data-preset="quarter">Kuartal</button>
+        <button class="preset" data-preset="year">Tahun</button>
+        <button class="preset" data-preset="all">Semua</button>
+      </div>
+      <input type="date" id="detail-from" aria-label="Dari tanggal">
+      <span class="dash">–</span>
+      <input type="date" id="detail-to" aria-label="Sampai tanggal">
+      <select id="detail-outlet" aria-label="Outlet"></select>
+    </nav>
+
+    <section class="grid">
+      <article class="panel wide">
+        <h2><span class="chip" aria-hidden="true"></span>Arus Kas &amp; Tren</h2>
+        <div class="chart tall" id="chart-cashflow"></div>
+      </article>
+      <article class="panel">
+        <h2><span class="chip" aria-hidden="true"></span>Struktur Pendapatan</h2>
+        <p class="panel-sub">Jasa vs penjualan produk (upselling barberman)</p>
+        <div class="chart tall" id="chart-revenue"></div>
+      </article>
+      <article class="panel wide">
+        <h2><span class="chip" aria-hidden="true"></span>Distribusi Pengeluaran</h2>
+        <p class="panel-sub">Klik batang untuk rincian per akun biaya</p>
+        <div class="chart mid" id="chart-cost"></div>
+      </article>
+      <article class="panel">
+        <h2><span class="chip" aria-hidden="true"></span>Tracker Bahan Habis Pakai</h2>
+        <p class="panel-sub">Titik merah = lonjakan di atas rata-rata normal</p>
+        <div class="chart mid" id="chart-cogs"></div>
+      </article>
+    </section>
+  </section>
+</main>
+
+<div class="modal-backdrop hidden" id="modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <header class="modal-head">
+      <h2 id="modal-title">Rincian</h2>
+      <button class="icon-btn" id="modal-close" aria-label="Tutup">×</button>
+    </header>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script src="/echarts.min.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

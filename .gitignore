@@ -1,0 +1,5 @@
+laporan/
+.venv/
+__pycache__/
+*.pyc
+bk21.db
