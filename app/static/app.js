@@ -38,6 +38,7 @@ function renderStaticKpis(totalNett) {
   $("#hkpi-modal").textContent = fmtRp.format(MODAL_AWAL);
   $("#hkpi-payback").textContent =
     (totalNett / MODAL_AWAL * 100).toFixed(1) + "%";
+  $("#hkpi-nett").textContent = fmtRp.format(totalNett);
 }
 
 /* ---------- halaman KPI ---------- */
