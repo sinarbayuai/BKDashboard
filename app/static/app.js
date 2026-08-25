@@ -125,7 +125,7 @@ async function renderOmzetProfit() {
 const INVESTORS = [
   { name: "Papah", modal: 100000000 },
   { name: "Guntur", modal: 229700000 },
-  { name: "Dion", modal: 277349223 },
+  { name: "Bayu", modal: 277349223 },
 ];
 
 async function renderPemodal() {
