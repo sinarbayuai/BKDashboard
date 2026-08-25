@@ -135,6 +135,22 @@ main { padding: 24px 28px 48px; max-width: 1480px; margin: 0 auto; }
   display: grid; grid-template-columns: repeat(5, 1fr);
   gap: 12px; margin-bottom: 20px;
 }
+.investor-row {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.investor .inv-rows {
+  display: flex; flex-direction: column; gap: 7px;
+  margin-top: 12px;
+}
+.investor .inv-rows > div {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+}
+.investor .inv-rows span { color: var(--muted); font-size: 12px; }
+.investor .inv-rows b {
+  font-family: "IBM Plex Mono", monospace; font-weight: 500;
+  font-size: 12.5px; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
 .kpi {
   background: var(--panel); border: 1px solid var(--line);
   border-radius: var(--radius); padding: 14px 16px 12px;
@@ -185,6 +201,7 @@ main { padding: 24px 28px 48px; max-width: 1480px; margin: 0 auto; }
 
 @media (max-width: 1100px) {
   .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .investor-row { grid-template-columns: 1fr; }
   .grid { grid-template-columns: 1fr; }
   .panel.wide { grid-column: span 1; }
 }

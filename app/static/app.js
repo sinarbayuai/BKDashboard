@@ -2,6 +2,7 @@ const $ = (s) => document.querySelector(s);
 const pages = {
   kpi: { state: { year: "all", outlet: "" } },
   detail: { state: { from: null, to: null, outlet: "" } },
+  pemodal: { state: {} },
 };
 let activePage = "kpi";
 
@@ -118,6 +119,34 @@ async function renderOmzetProfit() {
         itemStyle: { color: C().pos } },
     ],
   });
+}
+
+/* ---------- halaman Pemodal ---------- */
+const INVESTORS = [
+  { name: "Papah", modal: 100000000 },
+  { name: "Guntur", modal: 229700000 },
+  { name: "Dion", modal: 277349223 },
+];
+
+async function renderPemodal() {
+  const monthly = await fetch("/api/monthly-profit").then((r) => r.json());
+  const totalNett = monthly.reduce((s, r) => s + r.nett_profit, 0);
+  const totalModal = INVESTORS.reduce((s, i) => s + i.modal, 0);
+  $("#investors").innerHTML = INVESTORS.map((i) => {
+    const pct = i.modal / totalModal * 100;
+    const returned = totalNett * i.modal / totalModal;
+    const payback = returned / i.modal * 100;
+    return `<div class="kpi investor">
+      <div class="label"><span>${i.name}</span></div>
+      <div class="value">${fmtRp.format(i.modal)}</div>
+      <div class="inv-rows">
+        <div><span>Kepemilikan</span><b>${pct.toFixed(1)}%</b></div>
+        <div><span>Modal Terkembalikan</span>
+          <b>${fmtRp.format(returned)} · ${payback.toFixed(1)}%</b></div>
+      </div>
+      <div class="ruler"></div>
+    </div>`;
+  }).join("");
 }
 
 /* ---------- charts (halaman Detail) ---------- */
@@ -368,9 +397,9 @@ async function refreshPage(page) {
   try {
     if (page === "kpi") {
       renderKpis(await api("/api/kpi", {}, "kpi"));
-      const monthly = await fetch("/api/monthly-profit").then((r) => r.json());
-      renderStaticKpis(monthly.reduce((s, r) => s + r.nett_profit, 0));
       await Promise.all([renderProfitYear(), renderOmzetProfit()]);
+    } else if (page === "pemodal") {
+      await renderPemodal();
     } else {
       await Promise.all([renderCashflow(), renderRevenue(), renderCost(), renderCogs()]);
     }
@@ -411,8 +440,10 @@ $("#theme-toggle").addEventListener("click", () => {
   applyTheme(next);
   refreshPage(activePage);
 });
-const urlTheme = new URLSearchParams(location.search).get("theme");
-applyTheme(urlTheme || localStorage.getItem("bk21-theme") || "dark");
+  const urlTheme = new URLSearchParams(location.search).get("theme");
+  applyTheme(urlTheme || localStorage.getItem("bk21-theme") || "dark");
+  fetch("/api/monthly-profit").then((r) => r.json()).then((monthly) =>
+    renderStaticKpis(monthly.reduce((s, r) => s + r.nett_profit, 0)));
 
 (async function boot() {
   const meta = await fetch("/api/meta").then((r) => r.json());
@@ -427,6 +458,8 @@ applyTheme(urlTheme || localStorage.getItem("bk21-theme") || "dark");
   const r = presetRange("month", meta.max_date);
   setRange("detail", r.from, r.to);
   document.querySelector('#page-detail [data-preset="month"]').classList.add("active");
-  const initial = location.hash === "#detail" ? "detail" : "kpi";
-  document.querySelector(`.tab[data-page="${initial}"]`).click();
+  const initial = location.hash.slice(1);
+  document.querySelector(
+    `.tab[data-page="${["kpi", "detail", "pemodal"].includes(initial) ? initial : "kpi"}"]`
+  ).click();
 })();
