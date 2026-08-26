@@ -207,6 +207,97 @@ async function renderPemodal() {
 /* ---------- halaman Investasi (CRUD) ---------- */
 const TIPE_LABEL = { Emas: "Emas", Sukuk: "Sukuk", Reksadana: "Reksadana" };
 
+async function renderLokasiValues() {
+  const [invRes, lvRes] = await Promise.all([
+    fetch("/api/investments"),
+    fetch("/api/investments/lokasi-values"),
+  ]);
+  const invJson = invRes.ok ? await invRes.json() : [];
+  const lvJson = lvRes.ok ? await lvRes.json() : [];
+  const list = Array.isArray(invJson) ? invJson : [];
+  const lvs = Array.isArray(lvJson) ? lvJson : [];
+  const danaByLokasi = {};
+  for (const i of list) {
+    const key = i.lokasi || "";
+    danaByLokasi[key] = (danaByLokasi[key] || 0) + i.dana;
+  }
+  const allLokasi = [...new Set([...Object.keys(danaByLokasi), ...lvs.map((v) => v.lokasi)])];
+  allLokasi.sort();
+  const nilaiMap = Object.fromEntries(lvs.map((v) => [v.lokasi, v.nilai]));
+  const lastUpdate = lvs
+    .map((v) => v.updated_at)
+    .filter(Boolean)
+    .sort()
+    .pop();
+  $("#lokasi-updated").textContent = lastUpdate
+    ? `(update : ${new Date(lastUpdate).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })})`
+    : "";
+  const tbody = $("#lokasi-tbody");
+  if (!allLokasi.length) {
+    tbody.innerHTML = `<tr><td colspan="4" class="empty">Belum ada data lokasi.</td></tr>`;
+    return;
+  }
+
+  const rowHtml = (loc, editing) => {
+    const dana = danaByLokasi[loc] || 0;
+    const nilai = nilaiMap[loc] || 0;
+    const pct = dana ? ((nilai - dana) / dana * 100) : 0;
+    const pctColor = pct > 0 ? "var(--pos)" : pct < 0 ? "var(--neg)" : "";
+    const label = loc || "\u2013";
+    return `<tr>
+      <td>${label}</td>
+      <td class="num">${editing
+        ? `<input class="nilai-input" type="number" step="any" value="${nilai}" data-lokasi="${encodeURIComponent(loc)}">`
+        : fmtRp.format(nilai)}</td>
+      <td class="num" style="color:${pctColor}">${pct.toFixed(2)}%</td>
+      <td class="num"><span class="row-actions">${editing
+        ? `<button class="icon-sm" data-save="${encodeURIComponent(loc)}">Simpan</button>
+           <button class="icon-sm danger" data-cancel>Batal</button>`
+        : `<button class="icon-sm" data-edit="${encodeURIComponent(loc)}">Edit</button>`}</span></td>
+    </tr>`;
+  };
+
+  const totalHtml = () => {
+    const totalNilai = allLokasi.reduce((s, loc) => s + (nilaiMap[loc] || 0), 0);
+    const totalDana = allLokasi.reduce((s, loc) => s + (danaByLokasi[loc] || 0), 0);
+    const gain = totalNilai - totalDana;
+    const pct = totalDana ? (gain / totalDana * 100) : 0;
+    const pctColor = pct > 0 ? "var(--pos)" : pct < 0 ? "var(--neg)" : "";
+    return `<tr class="total-row">
+      <td>Total</td>
+      <td class="num" style="color:${pctColor}">${fmtRp.format(gain)}</td>
+      <td class="num" style="color:${pctColor}">${pct.toFixed(2)}%</td>
+      <td></td>
+    </tr>`;
+  };
+
+  const renderRows = (editingLoc) => {
+    tbody.innerHTML = allLokasi.map((loc) => rowHtml(loc, loc === editingLoc)).join("") + totalHtml();
+    tbody.querySelectorAll("[data-edit]").forEach((b) =>
+      b.addEventListener("click", () => renderRows(decodeURIComponent(b.dataset.edit))));
+    tbody.querySelectorAll("[data-cancel]").forEach((b) =>
+      b.addEventListener("click", () => renderRows(null)));
+    tbody.querySelectorAll("[data-save]").forEach((b) =>
+      b.addEventListener("click", async () => {
+        const loc = decodeURIComponent(b.dataset.save);
+        const inp = tbody.querySelector(".nilai-input");
+        const nilai = parseFloat(inp.value) || 0;
+        nilaiMap[loc] = nilai;
+        await fetch(`/api/investments/lokasi-values/${encodeURIComponent(loc)}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nilai }),
+        });
+        renderLokasiValues();
+      }));
+    if (editingLoc !== null) {
+      const inp = tbody.querySelector(".nilai-input");
+      if (inp) { inp.focus(); inp.select(); }
+    }
+  };
+  renderRows(null);
+}
+
 async function renderInvestments() {
   const list = await fetch("/api/investments").then((r) => r.json());
   const uangInvest = list.reduce((s, i) => s + i.dana, 0);
@@ -398,6 +489,7 @@ $("#inv-form").addEventListener("submit", async (e) => {
   });
   closeInvForm();
   renderInvestments();
+  renderLokasiValues();
 });
 
 /* ---------- charts (halaman Detail) ---------- */
@@ -653,6 +745,7 @@ async function refreshPage(page) {
       await renderPemodal();
     } else if (page === "investasi") {
       await renderInvestments();
+      await renderLokasiValues();
     } else {
       await Promise.all([renderCashflow(), renderRevenue(), renderCost(), renderCogs()]);
     }

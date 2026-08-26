@@ -289,6 +289,30 @@ def investments_delete(inv_id: int):
     return {"status": "ok"}
 
 
+class LokasiValueIn(BaseModel):
+    nilai: float
+
+
+@app.get("/api/investments/lokasi-values")
+def lokasi_values_list():
+    rows = connect().execute(
+        "SELECT lokasi, nilai, updated_at FROM lokasi_values ORDER BY lokasi").fetchall()
+    return [{"lokasi": r[0], "nilai": r[1], "updated_at": r[2]} for r in rows]
+
+
+@app.put("/api/investments/lokasi-values/{lokasi}")
+def lokasi_value_update(lokasi: str, body: LokasiValueIn):
+    now = datetime.now().isoformat(timespec="seconds")
+    with connect() as conn:
+        conn.execute(
+            "INSERT INTO lokasi_values (lokasi, nilai, updated_at) VALUES (?, ?, ?) "
+            "ON CONFLICT(lokasi) DO UPDATE SET nilai = excluded.nilai, "
+            "updated_at = excluded.updated_at",
+            (lokasi, body.nilai, now),
+        )
+    return {"status": "ok"}
+
+
 @app.post("/api/sync")
 def sync():
     from .ingest import run_ingest

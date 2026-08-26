@@ -51,6 +51,10 @@ CREATE TABLE IF NOT EXISTS investments (
     unit REAL NOT NULL,
     lokasi TEXT NOT NULL DEFAULT ''
 );
+CREATE TABLE IF NOT EXISTS lokasi_values (
+    lokasi TEXT PRIMARY KEY,
+    nilai REAL NOT NULL DEFAULT 0
+);
 """
 
 
@@ -66,3 +70,6 @@ def init_db():
         cols = {r[1] for r in conn.execute("PRAGMA table_info(investments)")}
         if "lokasi" not in cols:
             conn.execute("ALTER TABLE investments ADD COLUMN lokasi TEXT NOT NULL DEFAULT ''")
+        lv_cols = {r[1] for r in conn.execute("PRAGMA table_info(lokasi_values)")}
+        if "updated_at" not in lv_cols:
+            conn.execute("ALTER TABLE lokasi_values ADD COLUMN updated_at TEXT")
