@@ -1,12 +1,15 @@
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
-from .db import connect
+from .db import connect, init_db
 from .ingest import category_for
+
+init_db()
 
 app = FastAPI(title="BK21 Dashboard API")
 
@@ -232,6 +235,58 @@ def cogs_daily(from_d: str | None = Query(None, alias="from"),
         "days": [{"tanggal": r[0], "total": r[1],
                   "spike": bool(std > 0 and r[1] > threshold)} for r in rows],
     }
+
+
+class InvestmentIn(BaseModel):
+    tipe: str
+    nama_aset: str
+    dana: float
+    tanggal_beli: str
+    unit: float
+    lokasi: str = ""
+
+
+@app.get("/api/investments")
+def investments_list():
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT id, tipe, nama_aset, dana, tanggal_beli, unit, lokasi"
+            " FROM investments ORDER BY tanggal_beli DESC, id DESC").fetchall()
+    return [{"id": r[0], "tipe": r[1], "nama_aset": r[2], "dana": r[3],
+             "tanggal_beli": r[4], "unit": r[5], "lokasi": r[6]} for r in rows]
+
+
+@app.post("/api/investments")
+def investments_create(inv: InvestmentIn):
+    with connect() as conn:
+        cur = conn.execute(
+            "INSERT INTO investments (tipe, nama_aset, dana, tanggal_beli,"
+            " unit, lokasi) VALUES (?,?,?,?,?,?)",
+            (inv.tipe, inv.nama_aset, inv.dana, inv.tanggal_beli, inv.unit,
+             inv.lokasi))
+    return {"id": cur.lastrowid}
+
+
+@app.put("/api/investments/{inv_id}")
+def investments_update(inv_id: int, inv: InvestmentIn):
+    with connect() as conn:
+        cur = conn.execute(
+            "UPDATE investments SET tipe=?, nama_aset=?, dana=?,"
+            " tanggal_beli=?, unit=?, lokasi=? WHERE id=?",
+            (inv.tipe, inv.nama_aset, inv.dana, inv.tanggal_beli,
+             inv.unit, inv.lokasi, inv_id))
+    if cur.rowcount == 0:
+        raise HTTPException(404, "Investasi tidak ditemukan")
+    return {"status": "ok"}
+
+
+@app.delete("/api/investments/{inv_id}")
+def investments_delete(inv_id: int):
+    with connect() as conn:
+        cur = conn.execute("DELETE FROM investments WHERE id=?", (inv_id,))
+    if cur.rowcount == 0:
+        raise HTTPException(404, "Investasi tidak ditemukan")
+    return {"status": "ok"}
 
 
 @app.post("/api/sync")

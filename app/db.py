@@ -42,6 +42,15 @@ CREATE TABLE IF NOT EXISTS summary (
     nett_profit REAL NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_summary_period ON summary(period);
+CREATE TABLE IF NOT EXISTS investments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tipe TEXT NOT NULL,
+    nama_aset TEXT NOT NULL,
+    dana REAL NOT NULL,
+    tanggal_beli TEXT NOT NULL,
+    unit REAL NOT NULL,
+    lokasi TEXT NOT NULL DEFAULT ''
+);
 """
 
 
@@ -54,3 +63,6 @@ def connect():
 def init_db():
     with connect() as conn:
         conn.executescript(SCHEMA)
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(investments)")}
+        if "lokasi" not in cols:
+            conn.execute("ALTER TABLE investments ADD COLUMN lokasi TEXT NOT NULL DEFAULT ''")

@@ -3,6 +3,7 @@ const pages = {
   kpi: { state: { year: "all", outlet: "" } },
   detail: { state: { from: null, to: null, outlet: "" } },
   pemodal: { state: {} },
+  investasi: { state: {} },
 };
 let activePage = "kpi";
 
@@ -148,6 +149,163 @@ async function renderPemodal() {
     </div>`;
   }).join("");
 }
+
+/* ---------- halaman Investasi (CRUD) ---------- */
+const TIPE_LABEL = { Emas: "Emas", Sukuk: "Sukuk", Reksadana: "Reksadana" };
+
+async function renderInvestments() {
+  const list = await fetch("/api/investments").then((r) => r.json());
+  const uangInvest = list.reduce((s, i) => s + i.dana, 0);
+  const monthly = await fetch("/api/monthly-profit").then((r) => r.json());
+  const totalNett = monthly.reduce((s, r) => s + r.nett_profit, 0);
+  const kas = totalNett - uangInvest;
+  $("#inv-cards").innerHTML = [
+    { label: "Kas", value: kas, cls: kas >= 0 ? "profit" : "" },
+    { label: "Uang Invest", value: uangInvest },
+  ].map((c) => `<div class="kpi ${c.cls}">
+      <div class="label"><span>${c.label}</span></div>
+      <div class="value">${fmtRp.format(c.value)}</div>
+      <div class="ruler"></div>
+    </div>`).join("");
+  const kasVal = Math.max(kas, 0);
+  const tot = kasVal + uangInvest;
+  chart("chart-kas").setOption({
+    tooltip: { ...TOOLTIP(), trigger: "item",
+      formatter: (p) => `${p.name}<br/>${fmtRp.format(p.value)} (${p.percent}%)` },
+    legend: { bottom: 0, textStyle: { color: C().text } },
+    series: [{
+      type: "pie", radius: ["46%", "70%"], center: ["50%", "46%"],
+      itemStyle: { borderRadius: 10, borderColor: C().panel, borderWidth: 2 },
+      label: { show: false },
+      data: [
+        { name: "Kas", value: kasVal, itemStyle: { color: C().pos } },
+        { name: "Uang Invest", value: uangInvest, itemStyle: { color: C().brass } },
+      ],
+    }],
+    graphic: [{
+      type: "text", left: "center", top: "42%",
+      style: { text: tot ? (kasVal / tot * 100).toFixed(0) + "% kas" : "–",
+        fill: C().text, fontSize: 13, fontFamily: "IBM Plex Mono" },
+    }],
+  });
+
+  const byTipe = {};
+  for (const i of list) byTipe[i.tipe] = (byTipe[i.tipe] || 0) + i.dana;
+  const TIPE_COLORS = { Emas: C().brass, Sukuk: C().blue, Reksadana: C().pos };
+  chart("chart-tipe").setOption({
+    tooltip: { ...TOOLTIP(), trigger: "item",
+      formatter: (p) => `${p.name}<br/>${fmtRp.format(p.value)} (${p.percent}%)` },
+    legend: { bottom: 0, textStyle: { color: C().text } },
+    series: [{
+      type: "pie", roseType: "radius", radius: ["14%", "70%"],
+      center: ["50%", "46%"],
+      itemStyle: { borderRadius: 6, borderColor: C().panel, borderWidth: 2 },
+      label: { color: C().text, formatter: "{b}\n{d}%" },
+      data: Object.entries(byTipe).map(([t, v]) => ({
+        name: t, value: v, itemStyle: { color: TIPE_COLORS[t] || "#b06ab3" },
+      })),
+    }],
+  });
+
+  const byLokasi = {};
+  for (const i of list) byLokasi[i.lokasi || "(tanpa lokasi)"] =
+    (byLokasi[i.lokasi || "(tanpa lokasi)"] || 0) + i.dana;
+  const lokEntries = Object.entries(byLokasi).sort((a, b) => b[1] - a[1]);
+  const LOC_COLORS = [
+    C().brass, C().blue, C().pos, C().neg, "#b06ab3", "#8a8378", "#e8a87c"
+  ];
+  chart("chart-lokasi").setOption({
+    tooltip: { ...TOOLTIP(), trigger: "item",
+      formatter: (p) => `${p.name}<br/>${fmtRp.format(p.value)} (${p.percent}%)` },
+    grid: { left: 110, right: 40, top: 10, bottom: 10 },
+    xAxis: { type: "value", ...AXIS(),
+      axisLabel: { ...AXIS().axisLabel, formatter: fmtShort } },
+    yAxis: { type: "category", inverse: true,
+      data: lokEntries.map(([l]) => l), ...AXIS(),
+      axisLabel: { color: cssVar("--text"), fontSize: 12 } },
+    series: [{
+      type: "bar", cursor: "pointer",
+      data: lokEntries.map(([, v]) => v),
+      itemStyle: {
+        borderRadius: [0, 4, 4, 0],
+        color: (p) => LOC_COLORS[p.dataIndex % LOC_COLORS.length]
+      },
+      label: { show: true, position: "right", color: C().text,
+        fontFamily: "IBM Plex Mono", fontSize: 11,
+        formatter: (p) => fmtShort(p.value) },
+    }],
+  });
+
+  const tbody = $("#inv-tbody");
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">
+      Belum ada investasi. Klik "Tambah Investasi" untuk memulai.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map((i) => `<tr>
+    <td>${i.tanggal_beli}</td>
+    <td><span class="tipe-badge tipe-${i.tipe}">${TIPE_LABEL[i.tipe] || i.tipe}</span></td>
+    <td>${i.nama_aset}</td>
+    <td>${i.lokasi || "–"}</td>
+    <td class="num">${fmtRp.format(i.dana)}</td>
+    <td class="num">${i.unit.toLocaleString("id-ID")}</td>
+    <td class="num"><span class="row-actions">
+      <button class="icon-sm" data-edit="${i.id}">Edit</button>
+      <button class="icon-sm danger" data-del="${i.id}">Hapus</button>
+    </span></td>
+  </tr>`).join("");
+  tbody.querySelectorAll("[data-edit]").forEach((b) =>
+    b.addEventListener("click", () => openInvForm(list.find((x) => x.id === Number(b.dataset.edit)))));
+  tbody.querySelectorAll("[data-del]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      if (!confirm("Hapus investasi ini?")) return;
+      await fetch(`/api/investments/${b.dataset.del}`, { method: "DELETE" });
+      renderInvestments();
+    }));
+}
+
+let editingId = null;
+function openInvForm(item = null) {
+  editingId = item ? item.id : null;
+  $("#inv-modal-title").textContent = item ? "Edit Investasi" : "Tambah Investasi";
+  const f = $("#inv-form");
+  f.tipe.value = item ? item.tipe : "Emas";
+  f.nama_aset.value = item ? item.nama_aset : "";
+  f.lokasi.value = item ? item.lokasi : "Ajaib";
+  f.dana.value = item ? item.dana : "";
+  f.tanggal_beli.value = item ? item.tanggal_beli : "";
+  f.unit.value = item ? item.unit : "";
+  $("#inv-modal").classList.remove("hidden");
+  f.nama_aset.focus();
+}
+function closeInvForm() {
+  $("#inv-modal").classList.add("hidden");
+  editingId = null;
+}
+$("#btn-add-inv").addEventListener("click", () => openInvForm());
+$("#inv-modal-close").addEventListener("click", closeInvForm);
+$("#inv-cancel").addEventListener("click", closeInvForm);
+$("#inv-modal").addEventListener("click", (e) => e.target === e.currentTarget && closeInvForm());
+$("#inv-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  const body = {
+    tipe: f.tipe.value,
+    nama_aset: f.nama_aset.value.trim(),
+    lokasi: f.lokasi.value,
+    dana: parseFloat(f.dana.value),
+    tanggal_beli: f.tanggal_beli.value,
+    unit: parseFloat(f.unit.value),
+  };
+  const url = editingId ? `/api/investments/${editingId}` : "/api/investments";
+  await fetch(url, {
+    method: editingId ? "PUT" : "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  closeInvForm();
+  renderInvestments();
+});
 
 /* ---------- charts (halaman Detail) ---------- */
 const charts = {};
@@ -400,6 +558,8 @@ async function refreshPage(page) {
       await Promise.all([renderProfitYear(), renderOmzetProfit()]);
     } else if (page === "pemodal") {
       await renderPemodal();
+    } else if (page === "investasi") {
+      await renderInvestments();
     } else {
       await Promise.all([renderCashflow(), renderRevenue(), renderCost(), renderCogs()]);
     }
@@ -460,6 +620,6 @@ $("#theme-toggle").addEventListener("click", () => {
   document.querySelector('#page-detail [data-preset="month"]').classList.add("active");
   const initial = location.hash.slice(1);
   document.querySelector(
-    `.tab[data-page="${["kpi", "detail", "pemodal"].includes(initial) ? initial : "kpi"}"]`
+    `.tab[data-page="${["kpi", "detail", "pemodal", "investasi"].includes(initial) ? initial : "kpi"}"]`
   ).click();
 })();

@@ -35,6 +35,7 @@
     <button class="tab active" data-page="kpi">KPI</button>
     <button class="tab" data-page="detail">Detail</button>
     <button class="tab" data-page="pemodal">Pemodal</button>
+    <button class="tab" data-page="investasi">Investasi</button>
     <button class="theme-toggle" id="theme-toggle" title="Ganti tema" aria-label="Ganti tema"></button>
   </nav>
 </header>
@@ -106,6 +107,42 @@
   <section class="page" id="page-pemodal">
     <section class="investor-row" id="investors"></section>
   </section>
+
+  <!-- ============ HALAMAN INVESTASI ============ -->
+  <section class="page" id="page-investasi">
+    <section class="kpi-row kpi-2" id="inv-cards"></section>
+    <section class="grid-2">
+      <article class="panel">
+        <h2><span class="chip" aria-hidden="true"></span>Komposisi Kas vs Uang Invest</h2>
+        <div class="chart tall" id="chart-kas"></div>
+      </article>
+      <article class="panel">
+        <h2><span class="chip" aria-hidden="true"></span>Distribusi Investasi per Tipe</h2>
+        <div class="chart tall" id="chart-tipe"></div>
+      </article>
+    </section>
+    <article class="panel" style="margin-top:14px">
+      <h2><span class="chip" aria-hidden="true"></span>Distribusi Investasi per Lokasi</h2>
+      <p class="panel-sub">Total dana keluar per platform/lokasi invest</p>
+      <div class="chart mid" id="chart-lokasi"></div>
+    </article>
+    <article class="panel" style="margin-top:14px">
+      <header class="table-head">
+        <h2><span class="chip" aria-hidden="true"></span>Daftar Investasi</h2>
+        <button class="ghost" id="btn-add-inv">+ Tambah Investasi</button>
+      </header>
+      <div class="table-wrap">
+        <table class="inv-table" id="inv-table">
+          <thead>
+            <tr><th>Tanggal Beli</th><th>Tipe</th><th>Nama Aset</th><th>Lokasi</th>
+                <th class="num">Dana Keluar</th><th class="num">Jumlah Unit</th>
+                <th class="num">Aksi</th></tr>
+          </thead>
+          <tbody id="inv-tbody"></tbody>
+        </table>
+      </div>
+    </article>
+  </section>
 </main>
 
 <div class="modal-backdrop hidden" id="modal">
@@ -115,6 +152,51 @@
       <button class="icon-btn" id="modal-close" aria-label="Tutup">×</button>
     </header>
     <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="inv-modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="inv-modal-title">
+    <header class="modal-head">
+      <h2 id="inv-modal-title">Tambah Investasi</h2>
+      <button class="icon-btn" id="inv-modal-close" aria-label="Tutup">×</button>
+    </header>
+    <form class="modal-body inv-form" id="inv-form">
+      <label>Tipe Investasi
+        <select name="tipe" required>
+          <option value="Emas">Emas</option>
+          <option value="Sukuk">Sukuk</option>
+          <option value="Reksadana">Reksadana</option>
+        </select>
+      </label>
+      <label>Nama Aset
+        <input name="nama_aset" type="text" required placeholder="mis. Antam 1 gram">
+      </label>
+      <label>Lokasi Invest
+        <select name="lokasi" required>
+          <option value="Ajaib">Ajaib</option>
+          <option value="Bareksa">Bareksa</option>
+          <option value="Bibit">Bibit</option>
+          <option value="BSI">BSI</option>
+          <option value="Growin">Growin</option>
+          <option value="Nanovest">Nanovest</option>
+          <option value="Antam">Antam</option>
+        </select>
+      </label>
+      <label>Dana Keluar (Rp)
+        <input name="dana" type="number" min="0" step="0.01" required>
+      </label>
+      <label>Tanggal Beli
+        <input name="tanggal_beli" type="date" required>
+      </label>
+      <label>Jumlah Unit
+        <input name="unit" type="number" min="0" step="0.0001" required>
+      </label>
+      <div class="form-actions">
+        <button type="button" class="ghost" id="inv-cancel">Batal</button>
+        <button type="submit" class="primary">Simpan</button>
+      </div>
+    </form>
   </div>
 </div>
 
