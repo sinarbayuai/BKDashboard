@@ -79,6 +79,19 @@ body {
 
 .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
+.pager { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 16px; flex-wrap: wrap; }
+.pager-btn {
+  border: 1px solid var(--line); background: var(--panel); color: var(--text);
+  padding: 6px 12px; border-radius: 6px; cursor: pointer;
+  font: 500 13px "IBM Plex Sans", sans-serif;
+}
+.pager-btn:hover:not(:disabled) { border-color: var(--brass); color: var(--brass); }
+.pager-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.pager-btn.active { background: var(--brass); color: var(--brass-ink); border-color: var(--brass); }
+.pager-info { color: var(--muted); font-size: 12px; padding: 0 8px; }
+.pager-size { border: 1px solid var(--line); background: var(--panel); color: var(--text);
+  padding: 5px 8px; border-radius: 6px; font: 400 12px "IBM Plex Mono", monospace; }
+
 .tabs { display: flex; gap: 6px; align-items: center; }
 .tab {
   border: 0; background: transparent; color: var(--muted); cursor: pointer;

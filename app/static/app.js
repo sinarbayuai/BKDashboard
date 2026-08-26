@@ -3,7 +3,7 @@ const pages = {
   kpi: { state: { year: "all", outlet: "" } },
   detail: { state: { from: null, to: null, outlet: "" } },
   pemodal: { state: {} },
-  investasi: { state: {} },
+  investasi: { state: { page: 1, pageSize: 10 } },
 };
 let activePage = "kpi";
 
@@ -237,12 +237,20 @@ async function renderInvestments() {
   });
 
   const tbody = $("#inv-tbody");
-  if (!list.length) {
+  const st = pages.investasi.state;
+  const total = list.length;
+  const totalPages = Math.ceil(total / st.pageSize) || 1;
+  if (st.page > totalPages) st.page = totalPages;
+  const start = (st.page - 1) * st.pageSize;
+  const pageList = list.slice(start, start + st.pageSize);
+
+  if (!total) {
     tbody.innerHTML = `<tr><td colspan="7" class="empty">
       Belum ada investasi. Klik "Tambah Investasi" untuk memulai.</td></tr>`;
+    $("#inv-pager").innerHTML = "";
     return;
   }
-  tbody.innerHTML = list.map((i) => `<tr>
+  tbody.innerHTML = pageList.map((i) => `<tr>
     <td>${i.tanggal_beli}</td>
     <td><span class="tipe-badge tipe-${i.tipe}">${TIPE_LABEL[i.tipe] || i.tipe}</span></td>
     <td>${i.nama_aset}</td>
@@ -260,6 +268,37 @@ async function renderInvestments() {
     b.addEventListener("click", async () => {
       if (!confirm("Hapus investasi ini?")) return;
       await fetch(`/api/investments/${b.dataset.del}`, { method: "DELETE" });
+      renderInvestments();
+    }));
+
+  const pager = $("#inv-pager");
+  let html = "";
+  html += `<select class="pager-size" id="pager-size">`;
+  [5, 10, 20, 50].forEach((sz) =>
+    html += `<option value="${sz}" ${st.pageSize === sz ? "selected" : ""}>${sz} per halaman</option>`);
+  html += `</select>`;
+  html += `<button class="pager-btn" id="pager-prev" ${st.page === 1 ? "disabled" : ""}>‹ Prev</button>`;
+  for (let p = 1; p <= totalPages; p++) {
+    html += `<button class="pager-btn ${p === st.page ? "active" : ""}" data-page="${p}">${p}</button>`;
+  }
+  html += `<button class="pager-btn" id="pager-next" ${st.page === totalPages ? "disabled" : ""}>Next ›</button>`;
+  html += `<span class="pager-info">Hal ${st.page} dari ${totalPages} (${total} data)</span>`;
+  pager.innerHTML = html;
+
+  pager.querySelector("#pager-size").addEventListener("change", (e) => {
+    st.pageSize = parseInt(e.target.value);
+    st.page = 1;
+    renderInvestments();
+  });
+  pager.querySelector("#pager-prev").addEventListener("click", () => {
+    if (st.page > 1) { st.page--; renderInvestments(); }
+  });
+  pager.querySelector("#pager-next").addEventListener("click", () => {
+    if (st.page < totalPages) { st.page++; renderInvestments(); }
+  });
+  pager.querySelectorAll("[data-page]").forEach((b) =>
+    b.addEventListener("click", () => {
+      st.page = parseInt(b.dataset.page);
       renderInvestments();
     }));
 }
