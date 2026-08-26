@@ -265,7 +265,7 @@ async function renderLokasiValues() {
     const pctColor = pct > 0 ? "var(--pos)" : pct < 0 ? "var(--neg)" : "";
     return `<tr class="total-row">
       <td>Total</td>
-      <td class="num" style="color:${pctColor}">${fmtRp.format(gain)}</td>
+      <td class="num">${fmtRp.format(totalNilai)}</td>
       <td class="num" style="color:${pctColor}">${pct.toFixed(2)}%</td>
       <td></td>
     </tr>`;
