@@ -124,9 +124,33 @@ async function renderOmzetProfit() {
 
 /* ---------- halaman Pemodal ---------- */
 const INVESTORS = [
-  { name: "Papah", modal: 100000000 },
-  { name: "Guntur", modal: 229700000 },
-  { name: "Bayu", modal: 277349223 },
+  {
+    name: "Papah",
+    modal: 100000000,
+    details: [
+      { label: "Pendaftaran", value: 99000000 },
+      { label: "Ruko", value: 1000000 },
+    ],
+  },
+  {
+    name: "Guntur",
+    modal: 229700000,
+    details: [
+      { label: "Ruko", value: 229000000 },
+      { label: "Notaris", value: 700000 },
+    ],
+  },
+  {
+    name: "Bayu",
+    modal: 277349223,
+    details: [
+      { label: "Renovasi", value: 234270227 },
+      { label: "Modal Kerja", value: 25000000 },
+      { label: "Promosi", value: 4890000 },
+      { label: "Selisih Kurang Renovasi", value: 11538996 },
+      { label: "Renov Tiang", value: 1650000 },
+    ],
+  },
 ];
 
 async function renderPemodal() {
@@ -148,6 +172,36 @@ async function renderPemodal() {
       <div class="ruler"></div>
     </div>`;
   }).join("");
+
+  // Render detail table
+  // Build header
+  const thead = $("#pemodal-thead");
+  thead.innerHTML = `<th>Detail</th>` + INVESTORS.map((i) =>
+    `<th class="num">${i.name}</th>`).join("") + `<th class="num">Total</th>`;
+
+  // Collect all unique detail labels
+  const allLabels = [...new Set(INVESTORS.flatMap((i) => i.details.map((d) => d.label)))];
+
+  // Build rows
+  const detailRows = allLabels.map((label) => {
+    let rowTotal = 0;
+    const cells = INVESTORS.map((i) => {
+      const d = i.details.find((x) => x.label === label);
+      if (d) { rowTotal += d.value; return `<td class="num">${fmtRp.format(d.value)}</td>`; }
+      return `<td class="num">–</td>`;
+    }).join("");
+    return `<tr><td>${label}</td>${cells}<td class="num">${fmtRp.format(rowTotal)}</td></tr>`;
+  }).join("");
+
+  // Total row
+  const totalCells = INVESTORS.map((i) => {
+    const sub = i.details.reduce((s, d) => s + d.value, 0);
+    return `<td class="num">${fmtRp.format(sub)}</td>`;
+  }).join("");
+  const grandTotal = INVESTORS.reduce((s, i) => s + i.details.reduce((ss, d) => ss + d.value, 0), 0);
+  const totalRow = `<tr class="total-row"><td>Total</td>${totalCells}<td class="num">${fmtRp.format(grandTotal)}</td></tr>`;
+
+  $("#investor-details").innerHTML = detailRows + totalRow;
 }
 
 /* ---------- halaman Investasi (CRUD) ---------- */
