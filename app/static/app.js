@@ -564,6 +564,73 @@ async function renderRevenue() {
   });
 }
 
+async function renderSalesWeekday() {
+  const d = await api("/api/sales-by-weekday", {}, "detail");
+  const labels = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
+  chart("chart-weekday").setOption({
+    tooltip: { ...TOOLTIP(), trigger: "axis",
+      valueFormatter: (v) => fmtRp.format(v) },
+    grid: { left: 66, right: 16, top: 16, bottom: 30 },
+    xAxis: { type: "category", data: labels, ...AXIS() },
+    yAxis: { type: "value", ...AXIS(), axisLabel: { ...AXIS().axisLabel, formatter: fmtShort } },
+    series: [{
+      name: "Amount", type: "bar", data: d.days,
+      itemStyle: { color: C().brass, borderRadius: [3, 3, 0, 0] },
+    }],
+  });
+}
+
+async function renderSalesHeatmap() {
+  const d = await api("/api/sales-heatmap", {}, "detail");
+  const days = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
+  const max = Math.max(...d.matrix.flat().filter((v) => v != null), 0);
+  chart("chart-heatmap").setOption({
+    tooltip: { ...TOOLTIP(), position: "top",
+      formatter: (p) => `${days[p.value[1]]} ${p.value[0]}:00<br/>${fmtRp.format(p.value[2])}` },
+    grid: { left: 46, right: 14, top: 10, bottom: 30 },
+    xAxis: { type: "category", data: d.hours, splitArea: { show: true },
+      axisLabel: { ...AXIS().axisLabel, formatter: (v) => (v === 0 ? "00" : v % 4 === 0 ? v : "") } },
+    yAxis: { type: "category", data: days, splitArea: { show: true },
+      axisLabel: { color: C().text, fontSize: 11 } },
+    visualMap: {
+      min: 0, max: max, calculable: false, orient: "horizontal",
+      left: "center", bottom: 0, textStyle: { color: C().text },
+      inRange: { color: ["#2b2f36", C().blue, C().brass] },
+      formatter: (v) => fmtShort(v),
+    },
+    series: [{
+      type: "heatmap", data: d.matrix.flatMap((row, yi) =>
+        row.map((v, xi) => [xi, yi, v == null ? 0 : v])),
+      label: { show: false },
+      itemStyle: { borderColor: C().panel, borderWidth: 1 },
+      emphasis: { itemStyle: { borderColor: C().text, borderWidth: 1 } },
+    }],
+  });
+}
+
+async function renderTopItems() {
+  const d = await api("/api/top-items", {}, "detail");
+  const items = d.items;
+  const COLORS = [C().pos, C().blue, C().brass, "#b06ab3", C().neg,
+    "#8a8378", "#e8a87c", "#3fa7d6", "#d4a24e", "#7bbfae"];
+  chart("chart-top").setOption({
+    tooltip: { ...TOOLTIP(), trigger: "axis", axisPointer: { type: "shadow" },
+      valueFormatter: (v) => fmtRp.format(v) },
+    grid: { left: 150, right: 56, top: 12, bottom: 20 },
+    xAxis: { type: "value", ...AXIS(), axisLabel: { ...AXIS().axisLabel, formatter: fmtShort } },
+    yAxis: { type: "category", inverse: true, data: items.map((i) => i.name), ...AXIS(),
+      axisLabel: { color: cssVar("--text"), fontSize: 11 } },
+    series: [{
+      name: "Amount", type: "bar", data: items.map((i) => i.total),
+      barMaxWidth: 20,
+      itemStyle: { borderRadius: [0, 4, 4, 0],
+        color: (p) => COLORS[p.dataIndex % COLORS.length] },
+      label: { show: true, position: "right", color: C().text,
+        fontFamily: "IBM Plex Mono", fontSize: 11, formatter: (p) => fmtShort(p.value) },
+    }],
+  });
+}
+
 async function renderCost() {
   const d = await api("/api/cost-categories", {}, "detail");
   const cats = d.categories;
@@ -747,7 +814,7 @@ async function refreshPage(page) {
       await renderInvestments();
       await renderLokasiValues();
     } else {
-      await Promise.all([renderCashflow(), renderRevenue(), renderCost(), renderCogs()]);
+      await Promise.all([renderCashflow(), renderRevenue(), renderCost(), renderCogs(), renderSalesWeekday(), renderSalesHeatmap(), renderTopItems()]);
     }
   } catch (err) { console.error(err); }
 }

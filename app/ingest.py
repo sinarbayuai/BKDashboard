@@ -7,6 +7,7 @@ import openpyxl
 from .db import connect, init_db
 
 LAPORAN_DIR = Path(__file__).resolve().parent.parent / "laporan"
+PENJUALAN_DIR = Path(__file__).resolve().parent.parent / "penjualan"
 
 # Modul D spec: Expense -> kategori makro
 COST_CATEGORIES = {
@@ -207,4 +208,143 @@ def run_ingest():
         for f in files:
             n_cost, n_rev = ingest_file(f, conn)
             print(f"{f.relative_to(LAPORAN_DIR)}: cost={n_cost} revenue={n_rev}")
+    print("Selesai.")
+
+
+_PENJUALAN_COLS = (
+    "order_no", "tanggal", "jam", "order_source", "serve_by",
+    "customer_type", "customer_name", "item_group", "item_name",
+    "qty", "currency", "price", "discount_percent", "discount_amount",
+    "amount", "service_charge", "tax_amount", "cost_perunit",
+    "total_cost", "profit", "comission", "payment_type", "order_status",
+    "posting_time", "source_file", "row_idx",
+)
+
+_PENJUALAN_HDR_KEYS = (
+    "order no", "order date", "order time", "order source", "serve by",
+    "customer type", "customer name", "item group", "item name",
+    "qty", "currency", "price", "discount percent", "discount amount",
+    "amount", "service charge", "tax_amount", "cost perunit",
+    "total cost", "profit", "comission", "payment type", "order status",
+    "posting time",
+)
+
+_PENJUALAN_NUMERIC = frozenset({
+    "qty", "price", "discount_percent", "discount_amount", "amount",
+    "service_charge", "tax_amount", "cost_perunit", "total_cost",
+    "profit", "comission",
+})
+
+# schema col name -> header key (header key is _PENJUALAN_HDR_KEYS entry)
+_PENJUALAN_NUMERIC_HDR = {
+    "qty": "qty",
+    "price": "price",
+    "discount_percent": "discount percent",
+    "discount_amount": "discount amount",
+    "amount": "amount",
+    "service_charge": "service charge",
+    "tax_amount": "tax_amount",
+    "cost_perunit": "cost perunit",
+    "total_cost": "total cost",
+    "profit": "profit",
+    "comission": "comission",
+}
+
+
+def _str(v):
+    return str(v).strip() if v is not None else None
+
+
+def _date_str(v):
+    """Return YYYY-MM-DD from a date/datetime or date-like string, else None."""
+    if isinstance(v, datetime):
+        return v.date().isoformat()
+    if isinstance(v, date):
+        return v.isoformat()
+    if isinstance(v, str):
+        s = v.strip()
+        if not s:
+            return None
+        try:
+            return datetime.strptime(s[:10], "%Y-%m-%d").date().isoformat()
+        except ValueError:
+            return None
+    return None
+
+
+def _time_hms(v):
+    """Format order time as HH:MM:SS string."""
+    if v is None:
+        return None
+    if isinstance(v, datetime):
+        return v.strftime("%H:%M:%S")
+    if isinstance(v, date):
+        return None
+    s = str(v).strip()
+    return s if s else None
+
+
+def ingest_penjualan_file(path: Path, conn):
+    source = str(path.relative_to(PENJUALAN_DIR))
+    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    ws = wb[wb.sheetnames[0]]
+
+    # Row 0 = header
+    rows_iter = ws.iter_rows(values_only=True)
+    header = [str(c).strip().lower() if c else "" for c in next(rows_iter)]
+    idx = {name: header.index(name) for name in _PENJUALAN_HDR_KEYS}
+
+    data_rows: list[tuple] = []
+    for i, row in enumerate(ws.iter_rows(values_only=True), start=1):
+        order_date_v = row[idx["order date"]]
+        tanggal = _date_str(order_date_v)
+        if not tanggal:
+            continue
+
+        if (_str(row[idx["item group"]]) or "").lower() == "top up":
+            continue
+
+        vals = {
+            "order_no": _str(row[idx["order no"]]),
+            "tanggal": tanggal,
+            "jam": _time_hms(row[idx["order time"]]),
+            "order_source": _str(row[idx["order source"]]),
+            "serve_by": _str(row[idx["serve by"]]),
+            "customer_type": _str(row[idx["customer type"]]),
+            "customer_name": _str(row[idx["customer name"]]),
+            "item_group": _str(row[idx["item group"]]),
+            "item_name": _str(row[idx["item name"]]),
+            "currency": _str(row[idx["currency"]]),
+            "payment_type": _str(row[idx["payment type"]]),
+            "order_status": _str(row[idx["order status"]]),
+            "posting_time": _str(row[idx["posting time"]]),
+            "source_file": source,
+            "row_idx": i,
+        }
+        for col in _PENJUALAN_NUMERIC:
+            vals[col] = _num(row[idx[_PENJUALAN_NUMERIC_HDR[col]]])
+
+        data_rows.append(tuple(vals[c] for c in _PENJUALAN_COLS))
+
+    placeholders = ",".join(["?"] * len(_PENJUALAN_COLS))
+    col_names = ",".join(_PENJUALAN_COLS)
+    non_key = [c for c in _PENJUALAN_COLS if c not in ("source_file", "row_idx")]
+    update_set = ", ".join(f"{c}=excluded.{c}" for c in non_key)
+
+    conn.executemany(
+        f"INSERT INTO penjualan ({col_names}) VALUES ({placeholders})"
+        f" ON CONFLICT(source_file, row_idx) DO UPDATE SET {update_set}",
+        data_rows,
+    )
+
+    wb.close()
+    return len(data_rows)
+
+
+def run_ingest_penjualan():
+    init_db()
+    with connect() as conn:
+        for path in sorted(PENJUALAN_DIR.glob("*.xlsx")):
+            count = ingest_penjualan_file(path, conn)
+            print(f"{path.name}: {count}")
     print("Selesai.")

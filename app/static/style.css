@@ -204,6 +204,7 @@ main { padding: 24px 28px 48px; max-width: 1480px; margin: 0 auto; }
   border-radius: var(--radius); padding: 18px 20px;
 }
 .panel.wide { grid-column: span 2; }
+.panel.full { grid-column: span 3; }
 .panel h2 {
   font-family: Archivo, sans-serif; font-weight: 700; font-size: 15px;
   letter-spacing: .03em; display: flex; align-items: center; gap: 10px;
@@ -224,7 +225,7 @@ main { padding: 24px 28px 48px; max-width: 1480px; margin: 0 auto; }
   .kpi-row { grid-template-columns: repeat(2, 1fr); }
   .investor-row { grid-template-columns: 1fr; }
   .grid, .grid-2 { grid-template-columns: 1fr; }
-  .panel.wide { grid-column: span 1; }
+  .panel.wide, .panel.full { grid-column: span 1; }
 }
 
 @media (max-width: 720px) {

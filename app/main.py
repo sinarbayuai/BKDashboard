@@ -174,6 +174,54 @@ def cashflow(from_d: str | None = Query(None, alias="from"),
     } for b in buckets]
 
 
+@app.get("/api/sales-by-weekday")
+def sales_by_weekday(from_d: str | None = Query(None, alias="from"),
+                     to_d: str | None = Query(None, alias="to")):
+    f, t = _range(from_d, to_d)
+    # %w: 0=Minggu ... 6=Sabtu. Susun ulang ke urutan Senin..Minggu.
+    rows = connect().execute(
+        "SELECT CAST(strftime('%w', tanggal) AS INTEGER) wd,"
+        " COALESCE(SUM(amount),0) v"
+        " FROM penjualan WHERE tanggal BETWEEN ? AND ?"
+        " GROUP BY wd", (f, t)).fetchall()
+    by = {r["wd"]: r["v"] for r in rows}
+    days = [by.get(i, 0) for i in (1, 2, 3, 4, 5, 6, 0)]
+    return {"from": f, "to": t,
+            "days": days, "total": sum(days)}
+
+
+@app.get("/api/sales-heatmap")
+def sales_heatmap(from_d: str | None = Query(None, alias="from"),
+                  to_d: str | None = Query(None, alias="to")):
+    """Matrix jam-sibuk: baris = hari (Senin..Minggu), kolom = jam (0..23).
+    Nilai sel = total amount. None = tidak ada transaksi (jam tutup)."""
+    f, t = _range(from_d, to_d)
+    rows = connect().execute(
+        "SELECT CAST(strftime('%w', tanggal) AS INTEGER) wd,"
+        " CAST(substr(jam,12,2) AS INTEGER) hr, COALESCE(SUM(amount),0) v"
+        " FROM penjualan WHERE tanggal BETWEEN ? AND ? AND jam IS NOT NULL"
+        " GROUP BY wd, hr", (f, t)).fetchall()
+    # %w: 0=Minggu..6=Sabtu -> indeks baris Senin(0)..Minggu(6)
+    idx = {1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6}
+    by = {(idx[r["wd"]], r["hr"]): r["v"] for r in rows}
+    matrix = [[by.get((d, h)) or None for h in range(24)] for d in range(7)]
+    return {"from": f, "to": t, "matrix": matrix,
+            "hours": list(range(24))}
+
+
+@app.get("/api/top-items")
+def top_items(from_d: str | None = Query(None, alias="from"),
+              to_d: str | None = Query(None, alias="to"), limit: int = 10):
+    f, t = _range(from_d, to_d)
+    rows = connect().execute(
+        "SELECT item_name, COALESCE(SUM(amount),0) v, COUNT(*) n"
+        " FROM penjualan WHERE tanggal BETWEEN ? AND ? AND amount > 0"
+        " GROUP BY item_name ORDER BY v DESC LIMIT ?", (f, t, limit)).fetchall()
+    return {"from": f, "to": t,
+            "items": [{"name": r["item_name"], "total": r["v"],
+                       "count": r["n"]} for r in rows]}
+
+
 @app.get("/api/cost-categories")
 def cost_categories(from_d: str | None = Query(None, alias="from"),
                     to_d: str | None = Query(None, alias="to"),

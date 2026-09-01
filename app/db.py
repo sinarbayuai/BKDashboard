@@ -55,6 +55,37 @@ CREATE TABLE IF NOT EXISTS lokasi_values (
     lokasi TEXT PRIMARY KEY,
     nilai REAL NOT NULL DEFAULT 0
 );
+CREATE TABLE IF NOT EXISTS penjualan (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_no TEXT,
+    tanggal TEXT NOT NULL,
+    jam TEXT,
+    order_source TEXT,
+    serve_by TEXT,
+    customer_type TEXT,
+    customer_name TEXT,
+    item_group TEXT,
+    item_name TEXT,
+    qty REAL NOT NULL DEFAULT 0,
+    currency TEXT,
+    price REAL NOT NULL DEFAULT 0,
+    discount_percent REAL NOT NULL DEFAULT 0,
+    discount_amount REAL NOT NULL DEFAULT 0,
+    amount REAL NOT NULL DEFAULT 0,
+    service_charge REAL NOT NULL DEFAULT 0,
+    tax_amount REAL NOT NULL DEFAULT 0,
+    cost_perunit REAL NOT NULL DEFAULT 0,
+    total_cost REAL NOT NULL DEFAULT 0,
+    profit REAL NOT NULL DEFAULT 0,
+    comission REAL NOT NULL DEFAULT 0,
+    payment_type TEXT,
+    order_status TEXT,
+    posting_time TEXT,
+    source_file TEXT NOT NULL,
+    row_idx INTEGER NOT NULL,
+    UNIQUE(source_file, row_idx)
+);
+CREATE INDEX IF NOT EXISTS idx_penjualan_tanggal ON penjualan(tanggal);
 """
 
 

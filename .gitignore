@@ -2,3 +2,4 @@ laporan/
 .venv/
 __pycache__/
 *.pyc
+penjualan/
